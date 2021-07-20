@@ -1,0 +1,313 @@
+<script type="text/javascript">
+    RED.nodes.registerType('sensor-suhu',{
+        category: 'Sensor',
+        color: '#a6bbcf',
+        defaults: {
+                   name: { value:""},
+                   options: [{ idkey: "Default",label :'suhu',value: 0, range : 0,longitude:"",latitude:"" }],
+                   preOptions : [],
+                   timestamp : {value:false},
+                   allinone: {value:true},
+                   optionEdited : {value:false}
+                  },
+        inputs:1,
+        outputs:1,
+        icon: "microchip_24.png",
+        label: function() {
+            return this.name||"sensor Suhu";
+        },
+        
+        oneditcancel : function () {// is called when the edit dialog is cancelled.
+            // rollback any changes
+            var options = this.preOptions;
+            var node = this;
+            node.options = [];
+            
+            if ( options.length > 0)
+            for (var i=0; i< options.length; i++) {
+                var option = options[i];
+                var o = {
+                    idkey:  options[i].idkey,  
+                    label:  options[i].label,
+                    value:  options[i].value,
+                    range:  options[i].range,
+                    longitude: options[i].longitude,  
+                    latitude:  options[i].latitude
+                };
+                node.options.push(o);
+            }
+        },
+
+        oneditsave: function() { // called when the edit dialog is okayed [Done]
+            var options = $("#node-input-option-container").children();
+            var node = this;
+            node.options = [];
+            options.each(function(i) {
+                var option = $(this);
+                var o = {
+                    idkey: option.find(".node-input-option-idkey").val(),
+                    label: option.find(".node-input-option-label").val(),
+                    value: option.find(".node-input-option-value").val(),
+                    range: option.find(".node-input-option-range").val(),
+                     longitude: option.find(".node-input-option-longitude").val(),
+                    latitude: option.find(".node-input-option-latitude").val()
+                };
+                node.options.push(o);
+            });
+            // compare options and flip 'optionEdited' to enable [Deploy] button
+            if ( JSON.stringify(node.options) !== JSON.stringify(node.preOptions) )
+                 node.optionEdited = !node.optionEdited;
+
+            if ($("#node-input-timestamp").prop('checked')) node.timestamp = true;
+            if ($("#node-input-allinone").prop('checked')) node.allinone = true;
+        },
+        oneditprepare: function() { // is called immediately before the dialog is displayed.            
+            // Deep-copy the current options to control [Cancel] & [Deploy] condition
+            this.preOptions = JSON.parse(JSON.stringify(this.options));
+
+            if (this.timestamp  === undefined) {
+                this.timestamp = false;
+                $("#node-input-timestamp").prop('checked', this.timestamp);
+            } else {
+                if (typeof this.timestamp === "string") this.timestamp = (this.timestamp == 'true');
+                $("#node-input-timestamp").prop('checked', this.timestamp);               
+            }
+
+            if (this.allinone  === undefined) {
+                this.allinone = false;
+                $("#node-input-allinone").prop('checked', this.allinone);
+            } else {
+                if (typeof this.allinone === "string") this.allinone = (this.allinone == 'true');
+                $("#node-input-allinone").prop('checked', this.allinone);
+            }
+
+            function isNumeric(obj){
+                return !isNaN(obj);
+            }
+
+            function generateOption(i, option) {
+
+                var container = $('<li/>',{style:"background: #fff; margin:0; padding:8px 0px 0px; border-bottom: 1px solid #ccc;"});
+                var row = $('<div/>').appendTo(container);
+                var row2 = $('<div/>',{style:"padding-top:5px; padding-left:80px;"}).appendTo(container);
+                var row3 = $('<div/>',{style:"padding-top:5px; padding-left:80px;"}).appendTo(container);
+                var row4 = $('<div/>',{style:"padding-top:5px; padding-left:120px;"}).appendTo(container);
+
+
+               
+                /* idkey */
+                var idkeyClass ="node-input-option-idkey"
+                if (!option.idkey) { idkeyClass ="node-input-option-idkey input-error"; }
+                var idkeyField = $('<input/>',{class: idkeyClass,type:"text",style:"margin-left:10px; width:15%; width:80%;margin-right:90%;  margin-bottom:1%;", placeholder: 'cth.D1', value:option.idkey}).appendTo(row);
+                idkeyField.keyup(function() {
+
+                    option.idkey = $(this).val();
+                    if ($(this).val() && $(this).hasClass('input-error')) {
+                        $(this).removeClass('input-error')
+                    }
+
+                    if ( !$(this).val() && !$(this).hasClass('input-error')) {
+                        $(this).addClass('input-error')
+                    }
+
+                });
+                /* Label */
+                var labelClass ="node-input-option-label"
+                if (!option.label) { labelClass ="node-input-option-label input-error"; }
+                var labelField = $('<input/>',{class: labelClass,type:"text",style:"margin-left:7px; width:80%;margin-right:90%;  margin-bottom:1%;", placeholder: 'e.g. Temperature', value:option.label}).appendTo(row);
+                labelField.keyup(function() {
+
+                    option.label = $(this).val();
+                    if ($(this).val() && $(this).hasClass('input-error')) {
+                        $(this).removeClass('input-error')
+                    }
+
+                    if ( !$(this).val() && !$(this).hasClass('input-error')) {
+                        $(this).addClass('input-error')
+                    }
+
+                });
+
+                /* Value */
+                var valueClass ="node-input-option-value"
+                if (!option.value) { valueClass ="node-input-option-value input-error"; }
+                var valueField = $('<input/>',{class:valueClass,type:"text",max:"45",maxlength:"2",style:"margin-left: 7px; width: 24%; width:80%;margin-right:90%;  margin-bottom:1%;", placeholder: '24',value:option.value}).appendTo(row);
+                valueField.keyup(function() {
+
+                    option.value = $(this).val();
+                    if ($(this).val() && $(this).hasClass('input-error')) {
+                        $(this).removeClass('input-error')
+                    }
+                    if ( !$(this).val() && !$(this).hasClass('input-error')) {
+                        $(this).addClass('input-error')
+                    }
+                });
+
+                /* (+-) Range */
+                var rangeClass ="node-input-option-range"
+                //if (!option.value) { rangeClass ="node-input-option-range"; }
+                var rangeField = $('<input/>',{class:rangeClass,type:"text",maxlength:"2",style:"margin-left: 7px; width: 24%; width:80%;margin-right:90%;  margin-bottom:1%;", placeholder: '',value:option.range}).appendTo(row);
+                rangeField.keyup(function() {
+
+                    option.range = $(this).val();
+                });
+                  /* latitude */
+                var latitudeClass ="node-input-option-latitude"
+                if (!option.latitude) { latitudeClass ="node-input-option-latitude input-error"; }
+                var latitudeField = $('<input/>',{class: latitudeClass,type:"text",maxlength:"8",style:"margin-left:5px; width:15%; width:80%;margin-right:90%;  margin-bottom:1%;", placeholder: '', value:option.latitude}).appendTo(row);
+                latitudeField.keyup(function() {
+
+                    option.latitude = $(this).val();
+                    if ($(this).val() && $(this).hasClass('input-error')) {
+                        $(this).removeClass('input-error')
+                    }
+
+                    if ( !$(this).val() && !$(this).hasClass('input-error')) {
+                        $(this).addClass('input-error')
+                    }
+
+                });
+                 /* longitude */
+                var longitudeClass ="node-input-option-longitude"
+                if (!option.longitude) { longitudeClass ="node-input-option-longitude input-error"; }
+                var longitudeField = $('<input/>',{class: longitudeClass,type:"text",maxlength:"8",style:"margin-left:5px; width:15%; width:80%;margin-right:90%;  margin-bottom:1%;", placeholder: '', value:option.longitude}).appendTo(row);
+                longitudeField.keyup(function() {
+
+                    option.longitude = $(this).val();
+                    if ($(this).val() && $(this).hasClass('input-error')) {
+                        $(this).removeClass('input-error')
+                    }
+
+                    if ( !$(this).val() && !$(this).hasClass('input-error')) {
+                        $(this).addClass('input-error')
+                    }
+
+                });
+
+                var finalspan = $('<div/>',{style:"display:inline-block; width:5%;"}).appendTo(row);
+
+                /* remove [x] */
+                var deleteButton = $('<a/>',{href:"#",class:"editor-button editor-button-small", style:"left:45%; position:relative;"}).appendTo(finalspan);
+                $('<i/>',{class:"fa fa-remove"}).appendTo(deleteButton);
+                deleteButton.click(function() {
+
+                    container.find(".node-input-option-value").removeAttr('required')
+                    container.css({"background":"#fee"});
+                    container.fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                });
+
+                $("#node-input-option-container").append(container);
+            }
+
+            $("#node-input-add-parameter").click(function() {
+                generateOption($("#node-input-option-container").children().length+1,  {idkey: "",label :'suhu', value: 0, range : 0} );
+                $("#node-input-option-container-div").scrollTop($("#node-input-option-container-div").get(0).scrollHeight);
+            });
+
+            if ( this.options !== undefined )
+              for (var i=0; i<this.options.length; i++) {
+                var option = this.options[i];
+                generateOption(i+1,option);
+              }
+
+            $( "#node-input-option-container" ).sortable({
+                axis: "y",
+                handle:".node-input-option-handle",
+                cursor: "move"
+            });
+        }        
+    });
+</script>
+
+<script type="text/x-red" data-template-name="sensor-suhu">
+    
+    <div class="form-row node-input-option-container-row" style="margin-bottom:0px; width:100%; min-width:520px">
+        <label style="vertical-align:top;"><i class="fa fa-list-alt"></i>Iot-Virtual Lab Simulator
+<br><b><p style="margin-top: 10px; background-color:silver;">ID</p>
+            <b><p style="margin-top: 20px; background-color:silver;">NAME</p>
+                <b><p style="margin-top: 20px; background-color:silver;">VALUE</p>
+                    <b><p style="margin-top: 20px; background-color:silver;">DEFIASI</p>
+            <b><p style="margin-top: 20px; background-color:silver;">LATITUDE</p>
+            <b><p style="margin-top: 20px; background-color:silver;">LONGITUDE</p>    
+        
+    
+        </label>
+        <div style="display:inline-block; width:78%; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;">
+          <div style="width:100%; display: inline-block; background-color:#f3f3f3; padding-top:10px; padding-buttom:10px; border-top:0px solid; border-radius:5px 5px 0 0; border-bottom:1px solid #ccc;">
+              <div style="width:94%; display:inline-block; margin-left:32px">
+                
+                <div style="width:10%; text-align:center; float:left;"><!-- X --></div>
+              </div>
+          </div>
+          <div id="node-input-option-container-div" style=" height: 350px; padding: 5px; overflow-y:scroll;">
+            <ol id="node-input-option-container" style=" list-style-type:none; margin: 0;"></ol>
+          </div>
+        </div>
+    </div>
+    <div class="form-row">
+        <a href="#" class="editor-button editor-button-small" id="node-input-add-parameter" style="margin-top: 4px; margin-left: 103px;"><i class="fa fa-plus"></i> <span>element</span></a>
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-timestamp"><i class="fa fa-random"></i> Options</label>
+        <label for="node-input-timestamp" style="width:70%">
+        <input type="checkbox" id="node-input-timestamp" style="display:inline-block; width:22px; vertical-align:baseline;"> Timestamp</span>
+        </label>
+    </div>
+    <div class="form-row">
+        <label for="node-input-allinone"> </label>
+        <label for="node-input-allinone" style="width:70%">
+        <input type="checkbox" id="node-input-allinone" style="display:inline-block; width:22px; vertical-align:baseline;"> All-in-One</span>
+        </label>
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+
+</script>
+
+<script type="text/x-red" data-help-name="sensor-suhu">
+    <p>Control IoT parameters to be sent. (Fixed or Simulated)</p>
+    <p>
+        For example,
+         <br>
+        <table style="width:80%" border="1">
+            <tr>
+            <th>Label</th>
+            <th>Value</th> 
+            <th>Range</th>
+            </tr>
+            <tr>
+            <td>Temperature</td>
+            <td>88.7</td> 
+            <td>0</td>
+            </tr>
+            <tr>
+            <td>Humidity</td>
+            <td>30</td> 
+            <td>10</td>
+            </tr>
+        </table>
+        <br>
+        <br>
+        If <input type="checkbox" style="display:inline-block; width:22px; vertical-align:baseline;" checked> All-in-One</input>, 
+           
+           <code>{ "Temperature" : 88.7, "Humidity" : X}</code> where <code>30-10 <= X <= 30+10</code> will be sent.
+           <br>
+
+        if <input type="checkbox" style="display:inline-block; width:22px; vertical-align:baseline;"> All-in-One</input>, 
+            
+            <code>{ "Temperature" : 88.7 }</code> will be sent first and
+            <code>{ "Humidity" : X}</code> where <code>30-10 <= X <= 30+10</code> will be sent next.
+            <br>
+
+    </p>
+    <br>
+    <p>If <input type="checkbox" style="display:inline-block; width:22px; vertical-align:baseline;" checked> Timestamp</input>, 
+        <code>{ "timestamp" : xxxxxxx }</code> (the current time in millisecs since January 1st, 1970.) will be added into <code>msg.payload</code></p>
+    
+</script>
